@@ -3,9 +3,32 @@
   gather_facts: true
   become: true
   tasks:
-    - yum:
+    - name: Install DNS utilities
+      yum:
         name: bind-utils
       when: ansible_os_family == "RedHat"
-    - apt:
+      tags: dns
+
+    - name: Install DNS utilities
+      apt:
         name: dnsutils
       when: ansible_os_family == "Debian"
+      tags: dns
+
+    - name: Check DNS resolution for a host
+      command: nslookup example.com
+      register: nslookup_result
+      ignore_errors: yes  # Ignore errors in case DNS resolution fails
+      tags: dns
+
+    - name: Notify on DNS resolution failure
+      debug:
+        msg: "DNS resolution failed for {{ inventory_hostname }}!"
+      when: nslookup_result.rc != 0
+      notify: dns_failure
+
+  handlers:
+    - name: Handle DNS resolution failure
+      debug:
+        msg: "Please investigate DNS resolution issues."
+      tags: dns
